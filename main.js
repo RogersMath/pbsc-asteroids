@@ -456,11 +456,17 @@ function gameLoop(timestamp) {
   const dt = timestamp - lastTime;
   lastTime = timestamp;
   
-  update(dt);
+  // Only update/draw if mission is active
+  if (game.missionActive) {
+    update(dt);
+  }
   draw();
   
   requestAnimationFrame(gameLoop);
 }
+
+// Start game loop once
+requestAnimationFrame(gameLoop);
 
 // Controls setup
 function setupControls() {
@@ -585,8 +591,8 @@ function setupMenu() {
   // Start mission
   document.getElementById('startMissionBtn').addEventListener('click', () => {
     document.getElementById('loadoutMenu').style.display = 'none';
+    lastTime = performance.now(); // Reset timer reference
     init();
-    requestAnimationFrame(gameLoop);
   });
   
   // Return to loadout after game over
@@ -626,3 +632,7 @@ setupControls();
 setupMenu();
 document.getElementById('loadoutMenu').style.display = 'block';
 updateLoadoutUI();
+
+// Start game loop once at page load
+lastTime = performance.now();
+requestAnimationFrame(gameLoop);
