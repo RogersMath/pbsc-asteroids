@@ -17,12 +17,35 @@ window.addEventListener('resize', resizeCanvas);
 // Economy system
 const economy = {
   wallet: CONFIG.ECONOMY.STARTING_WALLET,
+  missionHistory: [], // Track net income of each mission
+  totalPrimesCollected: 0,
+  bestStreak: 0,
+  inflationMultiplier: 1.0, // Increases by 5% each mission
+  
   subscriptions: {
     scanner: { active: true, cost: CONFIG.ECONOMY.SUBSCRIPTIONS.scanner.cost },
     yield: { active: false, cost: CONFIG.ECONOMY.SUBSCRIPTIONS.yield.cost },
     firepower: { active: false, cost: CONFIG.ECONOMY.SUBSCRIPTIONS.firepower.cost },
     hull: { active: false, cost: CONFIG.ECONOMY.SUBSCRIPTIONS.hull.cost }
   },
+  
+  getInflatedCost(baseCost) {
+    return Math.ceil(baseCost * this.inflationMultiplier);
+  },
+  
+  getAcquisitionValue() {
+    if (this.missionHistory.length < CONFIG.ECONOMY.ACQUISITION_MIN_MISSIONS) {
+      return 0;
+    }
+    // Average of last 4 missions * 5
+    const last4 = this.missionHistory.slice(-4);
+    const avg = last4.reduce((sum, val) => sum + val, 0) / last4.length;
+    return Math.ceil(avg * CONFIG.ECONOMY.ACQUISITION_MULTIPLIER);
+  },
+  
+  canSellCompany() {
+    return this.missionHistory.length >= CONFIG.ECONOMY.ACQUISITION_MIN_MISSIONS;
+  }
 };
 
 // Game state
@@ -36,6 +59,7 @@ const game = {
   started: false,
   missionActive: false,
   isTutorial: false,
+  isPaused: false,
   
   // Mission timing
   missionTimer: 0,
@@ -48,7 +72,63 @@ const game = {
   
   // Damage tracking
   damageTaken: 0,
+  
+  // Space background (generated once)
+  spaceBackground: null,
 };
+
+// Generate space background
+function generateSpaceBackground() {
+  const bg = {
+    galaxies: [],
+    stars: [],
+    planet: null
+  };
+  
+  // Generate galaxies
+  for (let i = 0; i < CONFIG.VISUAL.BACKGROUND_GALAXIES; i++) {
+    bg.galaxies.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      size: 80 + Math.random() * 120,
+      rotation: Math.random() * Math.PI * 2,
+      opacity: 0.15 + Math.random() * 0.15
+    });
+  }
+  
+  // Generate larger decorative stars
+  for (let i = 0; i < CONFIG.VISUAL.BACKGROUND_STARS; i++) {
+    bg.stars.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      size: 3 + Math.random() * 8,
+      opacity: 0.3 + Math.random() * 0.4,
+      color: ['#67e8f9', '#fbbf24', '#f87171', '#a78bfa'][Math.floor(Math.random() * 4)]
+    });
+  }
+  
+  // Maybe generate a planet
+  if (Math.random() < CONFIG.VISUAL.BACKGROUND_PLANET_CHANCE) {
+    const side = Math.floor(Math.random() * 4); // 0=left, 1=top, 2=right, 3=bottom
+    const size = 300 + Math.random() * 500;
+    let x, y;
+    
+    switch(side) {
+      case 0: x = -size * 0.6; y = Math.random() * canvas.height; break;
+      case 1: x = Math.random() * canvas.width; y = -size * 0.6; break;
+      case 2: x = canvas.width + size * 0.6; y = Math.random() * canvas.height; break;
+      case 3: x = Math.random() * canvas.width; y = canvas.height + size * 0.6; break;
+    }
+    
+    bg.planet = {
+      x, y, size,
+      color: ['#8b5cf6', '#ec4899', '#f97316', '#14b8a6'][Math.floor(Math.random() * 4)],
+      rings: Math.random() > 0.5
+    };
+  }
+  
+  return bg;
+}
 
 // Control state
 const controls = {
@@ -59,18 +139,14 @@ const controls = {
 
 // Game initialization
 function initTutorial() {
-  game.player = new Ship(
-    canvas.width / 2, 
-    canvas.height / 2, 
-    false // No hull upgrade in tutorial
-  );
+  game.player = null; // Don't spawn player yet
   game.asteroids = [];
   game.projectiles = [];
   game.particles = [];
   game.score = 0;
   game.gameOver = false;
   game.started = true;
-  game.missionActive = true;
+  game.missionActive = false; // Not active until player dismisses tutorial
   game.isTutorial = true;
   game.missionTimer = 0;
   game.asteroidsRemaining = 0; // No pool in tutorial
@@ -78,10 +154,13 @@ function initTutorial() {
   game.streakActive = true;
   game.damageTaken = 0;
   
-  // Spawn exactly 2 asteroids for tutorial
-  spawnTutorialAsteroids();
+  // Set initial HUD values
+  document.getElementById('health').textContent = '100';
+  document.getElementById('score').textContent = '0';
+  document.getElementById('streakDisplay').style.display = 'none';
   
-  updateHUD();
+  // Spawn exactly 2 asteroids for tutorial (they'll float around)
+  spawnTutorialAsteroids();
   
   // Hide timer in tutorial
   document.getElementById('timer').parentElement.style.display = 'none';
@@ -93,16 +172,18 @@ function initTutorial() {
 function spawnTutorialAsteroids() {
   // Spawn one prime and one composite in safe positions
   const prime = new Asteroid(canvas.width * 0.3, canvas.height * 0.3);
-  while (!prime.isPrime) {
-    const newNum = CONFIG.ASTEROID.PRIMES[Math.floor(Math.random() * CONFIG.ASTEROID.PRIMES.length)];
-    prime.number = newNum;
+  // Already generated as prime or composite, just ensure it's prime
+  if (!prime.isPrime) {
+    // Force it to be a small prime for tutorial
+    prime.number = [2, 3, 5, 7, 11][Math.floor(Math.random() * 5)];
     prime.isPrime = true;
   }
   
   const composite = new Asteroid(canvas.width * 0.7, canvas.height * 0.7);
-  while (composite.isPrime) {
-    const newNum = CONFIG.ASTEROID.COMPOSITES[Math.floor(Math.random() * CONFIG.ASTEROID.COMPOSITES.length)];
-    composite.number = newNum;
+  // Ensure it's composite
+  if (composite.isPrime) {
+    // Force it to be a small composite for tutorial
+    composite.number = [4, 6, 8, 9, 10][Math.floor(Math.random() * 5)];
     composite.isPrime = false;
   }
   
@@ -127,18 +208,22 @@ function showTutorialMessage() {
         <p>Toggle modes with SPACEBAR or the mode button</p>
         <p><strong>No time limit. Clear both asteroids to begin!</strong></p>
       </div>
+      <button class="tutorial-btn" id="tutorialOkBtn">OKAY, GOT IT</button>
     </div>
   `;
   document.body.appendChild(tutorialDiv);
   
-  // Auto-remove after first action
-  setTimeout(() => {
+  // When player clicks OK, spawn ship and start mission
+  document.getElementById('tutorialOkBtn').addEventListener('click', () => {
     const msg = document.getElementById('tutorialMessage');
-    if (msg) {
-      msg.style.opacity = '0';
-      setTimeout(() => msg.remove(), 500);
-    }
-  }, 8000);
+    msg.style.opacity = '0';
+    setTimeout(() => msg.remove(), 300);
+    
+    // NOW spawn the ship and activate mission
+    game.player = new Ship(canvas.width / 2, canvas.height / 2, false);
+    game.missionActive = true;
+    updateHUD();
+  });
 }
 
 function initMission() {
@@ -160,6 +245,9 @@ function initMission() {
   game.currentStreak = 0;
   game.streakActive = true;
   game.damageTaken = 0;
+  
+  // Generate new space background for this mission
+  game.spaceBackground = generateSpaceBackground();
   
   // Spawn initial asteroids
   for (let i = 0; i < Math.min(6, game.asteroidsRemaining); i++) {
@@ -211,7 +299,7 @@ function createExplosion(x, y, color, isCollection = false) {
 
 // Update loop - NOW WITH PROPER DELTA TIME
 function update(dt) {
-  if (game.gameOver || !game.started || !game.missionActive) return;
+  if (game.gameOver || !game.started || !game.missionActive || game.isPaused) return;
   
   // dt is in milliseconds, convert to seconds for physics
   const dtSeconds = dt / 1000;
@@ -358,7 +446,91 @@ function update(dt) {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-  // Draw starfield
+  // Draw space background if not generated yet
+  if (!game.spaceBackground) {
+    game.spaceBackground = generateSpaceBackground();
+  }
+  
+  // Draw planet (behind everything)
+  if (game.spaceBackground.planet) {
+    const p = game.spaceBackground.planet;
+    ctx.save();
+    ctx.globalAlpha = 0.3;
+    
+    // Planet body
+    const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+    gradient.addColorStop(0, p.color);
+    gradient.addColorStop(1, '#0a0a0a');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Rings if applicable
+    if (p.rings) {
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = p.size * 0.15;
+      ctx.globalAlpha = 0.2;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, p.size * 1.4, p.size * 0.3, 0.3, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+  
+  // Draw galaxies
+  game.spaceBackground.galaxies.forEach(g => {
+    ctx.save();
+    ctx.translate(g.x, g.y);
+    ctx.rotate(g.rotation);
+    ctx.globalAlpha = g.opacity;
+    
+    // Spiral galaxy effect
+    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, g.size);
+    gradient.addColorStop(0, '#a78bfa');
+    gradient.addColorStop(0.5, '#6366f1');
+    gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
+    ctx.fillStyle = gradient;
+    
+    ctx.beginPath();
+    ctx.ellipse(0, 0, g.size, g.size * 0.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.beginPath();
+    ctx.ellipse(0, 0, g.size * 0.3, g.size, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  });
+  
+  // Draw decorative stars
+  game.spaceBackground.stars.forEach(s => {
+    ctx.save();
+    ctx.globalAlpha = s.opacity;
+    ctx.fillStyle = s.color;
+    
+    // 4-pointed star
+    ctx.translate(s.x, s.y);
+    ctx.beginPath();
+    ctx.moveTo(0, -s.size);
+    ctx.lineTo(s.size * 0.2, -s.size * 0.2);
+    ctx.lineTo(s.size, 0);
+    ctx.lineTo(s.size * 0.2, s.size * 0.2);
+    ctx.lineTo(0, s.size);
+    ctx.lineTo(-s.size * 0.2, s.size * 0.2);
+    ctx.lineTo(-s.size, 0);
+    ctx.lineTo(-s.size * 0.2, -s.size * 0.2);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  });
+  
+  // Draw starfield (small dots)
   ctx.fillStyle = `rgba(255, 255, 255, ${CONFIG.VISUAL.STARFIELD_OPACITY})`;
   for (let i = 0; i < CONFIG.VISUAL.STARFIELD_COUNT; i++) {
     const x = (i * 137.5) % canvas.width;
@@ -390,7 +562,7 @@ function draw() {
   });
   
   // Draw player
-  if (!game.gameOver && game.missionActive) {
+  if (!game.gameOver && game.missionActive && game.player) {
     game.player.draw(ctx);
   }
 }
@@ -409,6 +581,8 @@ function updateTimer() {
 }
 
 function updateHUD() {
+  if (!game.player) return; // Skip if player hasn't spawned yet
+  
   const healthEl = document.getElementById('health');
   const health = Math.max(0, Math.round(game.player.health));
   healthEl.textContent = health;
@@ -505,30 +679,50 @@ function showMissionResults() {
   
   const totalEarnings = baseEarnings + streakBonus + yieldBonus;
   
-  // Calculate costs
-  let totalCosts = CONFIG.ECONOMY.SPACE_TAX;
+  // Calculate costs WITH INFLATION
+  let totalCosts = economy.getInflatedCost(CONFIG.ECONOMY.SPACE_TAX);
   
-  // Subscription costs
-  if (economy.subscriptions.scanner.active) totalCosts += economy.subscriptions.scanner.cost;
-  if (economy.subscriptions.yield.active) totalCosts += economy.subscriptions.yield.cost;
-  if (economy.subscriptions.firepower.active) totalCosts += economy.subscriptions.firepower.cost;
-  if (economy.subscriptions.hull.active) totalCosts += economy.subscriptions.hull.cost;
+  // Subscription costs (inflated)
+  const subscriptionCosts = 
+    (economy.subscriptions.scanner.active ? economy.getInflatedCost(economy.subscriptions.scanner.cost) : 0) +
+    (economy.subscriptions.yield.active ? economy.getInflatedCost(economy.subscriptions.yield.cost) : 0) +
+    (economy.subscriptions.firepower.active ? economy.getInflatedCost(economy.subscriptions.firepower.cost) : 0) +
+    (economy.subscriptions.hull.active ? economy.getInflatedCost(economy.subscriptions.hull.cost) : 0);
   
-  // Action costs
-  const actionCosts = game.player.getTotalActionCosts();
-  totalCosts += Math.ceil(actionCosts);
+  totalCosts += subscriptionCosts;
   
-  // Maintenance costs (based on damage taken)
-  const maintenanceCost = CONFIG.ECONOMY.BASE_MAINTENANCE + 
+  // Action costs (inflated)
+  const actionCosts = economy.getInflatedCost(game.player.getTotalActionCosts());
+  totalCosts += actionCosts;
+  
+  // Maintenance costs (inflated, based on damage taken)
+  const baseMaintenance = CONFIG.ECONOMY.BASE_MAINTENANCE + 
                          Math.ceil(game.damageTaken * CONFIG.ECONOMY.MAINTENANCE_PER_DAMAGE);
+  const maintenanceCost = economy.getInflatedCost(baseMaintenance);
   totalCosts += maintenanceCost;
   
-  // Tow fee if hull destroyed
-  const towFee = (game.player.health <= 0) ? CONFIG.ECONOMY.TOW_FEE : 0;
+  // Tow fee if hull destroyed (inflated)
+  const towFee = (game.player.health <= 0) ? economy.getInflatedCost(CONFIG.ECONOMY.TOW_FEE) : 0;
   totalCosts += towFee;
   
   const netProfit = totalEarnings - totalCosts;
   economy.wallet += netProfit;
+  
+  // Track mission history and stats
+  economy.missionHistory.push(netProfit);
+  economy.totalPrimesCollected += game.score;
+  if (game.currentStreak > economy.bestStreak) {
+    economy.bestStreak = game.currentStreak;
+  }
+  
+  // Apply inflation for next mission
+  economy.inflationMultiplier *= CONFIG.ECONOMY.INFLATION_RATE;
+  
+  // Check for bankruptcy
+  if (economy.wallet < 0) {
+    showBankruptcyScreen();
+    return;
+  }
   
   // Update game over screen
   document.getElementById('primesCollected').textContent = game.score;
@@ -545,10 +739,9 @@ function showMissionResults() {
   
   document.getElementById('yieldBonus').textContent = yieldBonus + '¢';
   
-  // Show cost breakdown
-  const subscriptionCosts = totalCosts - Math.ceil(actionCosts) - maintenanceCost - towFee;
-  document.getElementById('subscriptionCosts').textContent = '-' + subscriptionCosts + '¢';
-  document.getElementById('actionCosts').textContent = '-' + Math.ceil(actionCosts) + '¢';
+  // Show cost breakdown (including tax in subscriptions)
+  document.getElementById('subscriptionCosts').textContent = '-' + (subscriptionCosts + economy.getInflatedCost(CONFIG.ECONOMY.SPACE_TAX)) + '¢';
+  document.getElementById('actionCosts').textContent = '-' + actionCosts + '¢';
   document.getElementById('maintenanceCost').textContent = '-' + maintenanceCost + '¢';
   
   const towFeeEl = document.getElementById('towFeeLine');
@@ -563,7 +756,21 @@ function showMissionResults() {
   netProfitEl.textContent = netProfit + '¢';
   netProfitEl.style.color = netProfit >= 0 ? '#22d3ee' : '#ef4444';
   
-  // Update wallet display
+  // Update acquisition tracker
+  const acquisitionValue = economy.getAcquisitionValue();
+  const acquisitionTracker = document.getElementById('acquisitionTracker');
+  const sellBtn = document.getElementById('sellCompanyBtn');
+  
+  if (economy.canSellCompany()) {
+    acquisitionTracker.style.display = 'block';
+    sellBtn.style.display = 'block';
+    document.getElementById('acquisitionValue').textContent = acquisitionValue + '¢';
+  } else {
+    acquisitionTracker.style.display = 'none';
+    sellBtn.style.display = 'none';
+  }
+  
+  // Update wallet and cost displays for next mission
   updateLoadoutToggles();
   
   document.getElementById('gameOver').style.display = 'block';
@@ -592,7 +799,15 @@ function setupControls() {
   
   // Keyboard controls
   window.addEventListener('keydown', (e) => {
-    if (!game.missionActive) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (game.missionActive && !game.gameOver) {
+        togglePause();
+      }
+      return;
+    }
+    
+    if (!game.missionActive || game.isPaused) return;
     
     if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
       controls.turnLeft = true;
@@ -678,6 +893,12 @@ function setupControls() {
 function updateLoadoutToggles() {
   document.getElementById('walletAmount').textContent = economy.wallet + '¢';
   
+  // Update costs to show inflated values for NEXT mission
+  document.getElementById('scannerCost').textContent = economy.getInflatedCost(CONFIG.ECONOMY.SUBSCRIPTIONS.scanner.cost) + '¢';
+  document.getElementById('yieldCost').textContent = economy.getInflatedCost(CONFIG.ECONOMY.SUBSCRIPTIONS.yield.cost) + '¢';
+  document.getElementById('firepowerCost').textContent = economy.getInflatedCost(CONFIG.ECONOMY.SUBSCRIPTIONS.firepower.cost) + '¢';
+  document.getElementById('hullCost').textContent = economy.getInflatedCost(CONFIG.ECONOMY.SUBSCRIPTIONS.hull.cost) + '¢';
+  
   // Update toggle states
   document.getElementById('scannerToggle').checked = economy.subscriptions.scanner.active;
   document.getElementById('yieldToggle').checked = economy.subscriptions.yield.active;
@@ -708,11 +929,133 @@ function setupGameOverToggles() {
     lastTime = performance.now();
     initMission();
   });
+  
+  // Sell company button
+  document.getElementById('sellCompanyBtn').addEventListener('click', () => {
+    showVictoryScreen();
+  });
+}
+
+// Pause menu functions
+function togglePause() {
+  if (game.isTutorial) return; // Can't pause tutorial
+  
+  game.isPaused = !game.isPaused;
+  
+  if (game.isPaused) {
+    document.getElementById('pauseMenu').style.display = 'flex';
+    document.getElementById('pauseMissions').textContent = economy.missionHistory.length;
+    document.getElementById('pauseWallet').textContent = economy.wallet + '¢';
+    document.getElementById('pauseAcquisition').textContent = economy.getAcquisitionValue() + '¢';
+  } else {
+    document.getElementById('pauseMenu').style.display = 'none';
+  }
+}
+
+function setupPauseMenu() {
+  // Menu button
+  document.getElementById('menuBtn').addEventListener('click', () => {
+    if (game.missionActive && !game.gameOver) {
+      togglePause();
+    }
+  });
+  
+  // Resume button
+  document.getElementById('resumeBtn').addEventListener('click', () => {
+    togglePause();
+  });
+  
+  // Quit button
+  document.getElementById('quitBtn').addEventListener('click', () => {
+    game.isPaused = false;
+    game.missionActive = false;
+    game.gameOver = true;
+    document.getElementById('pauseMenu').style.display = 'none';
+    endMission();
+  });
+}
+
+// Victory screen
+function showVictoryScreen() {
+  const salePrice = economy.getAcquisitionValue();
+  const avgIncome = economy.missionHistory.length > 0 ?
+    Math.ceil(economy.missionHistory.reduce((a, b) => a + b, 0) / economy.missionHistory.length) : 0;
+  
+  document.getElementById('gameOver').style.display = 'none';
+  document.getElementById('finalSalePrice').textContent = salePrice + '¢';
+  document.getElementById('finalMissions').textContent = economy.missionHistory.length;
+  document.getElementById('finalPrimes').textContent = economy.totalPrimesCollected;
+  document.getElementById('finalAvgIncome').textContent = avgIncome + '¢';
+  document.getElementById('finalBestStreak').textContent = economy.bestStreak + 'x';
+  
+  document.getElementById('victoryScreen').style.display = 'flex';
+}
+
+// Bankruptcy screen
+function showBankruptcyScreen() {
+  const acquisitionValue = economy.getAcquisitionValue();
+  const finalScore = economy.wallet + acquisitionValue;
+  const avgIncome = economy.missionHistory.length > 0 ?
+    Math.ceil(economy.missionHistory.reduce((a, b) => a + b, 0) / economy.missionHistory.length) : 0;
+  
+  // Update victory screen to show bankruptcy version
+  document.getElementById('gameOver').style.display = 'none';
+  
+  // Add bankruptcy styling
+  document.querySelector('.victory-container').classList.add('bankruptcy');
+  
+  // Change title and subtitle for bankruptcy
+  document.getElementById('victoryTitle').textContent = 'BANKRUPTCY!';
+  document.getElementById('victorySubtitle').textContent = 'Your mining operation has run out of funds';
+  
+  document.getElementById('finalSalePrice').textContent = finalScore + '¢';
+  document.getElementById('finalMissions').textContent = economy.missionHistory.length;
+  document.getElementById('finalPrimes').textContent = economy.totalPrimesCollected;
+  document.getElementById('finalAvgIncome').textContent = avgIncome + '¢';
+  document.getElementById('finalBestStreak').textContent = economy.bestStreak + 'x';
+  
+  // Change label for bankruptcy
+  const salePriceLabel = document.querySelector('.final-label');
+  if (salePriceLabel) {
+    salePriceLabel.textContent = 'FINAL SCORE';
+  }
+  
+  document.getElementById('victoryScreen').style.display = 'flex';
+}
+
+function setupVictoryScreen() {
+  document.getElementById('playAgainBtn').addEventListener('click', () => {
+    // Reset everything
+    economy.wallet = CONFIG.ECONOMY.STARTING_WALLET;
+    economy.missionHistory = [];
+    economy.totalPrimesCollected = 0;
+    economy.bestStreak = 0;
+    economy.inflationMultiplier = 1.0;
+    economy.subscriptions.scanner.active = true;
+    economy.subscriptions.yield.active = false;
+    economy.subscriptions.firepower.active = false;
+    economy.subscriptions.hull.active = false;
+    
+    // Reset victory screen text and styling for next time
+    document.querySelector('.victory-container').classList.remove('bankruptcy');
+    document.getElementById('victoryTitle').textContent = 'ACQUISITION COMPLETE!';
+    document.getElementById('victorySubtitle').textContent = "Standard Asteroid, Inc. has purchased your operation";
+    const salePriceLabel = document.querySelector('.final-label');
+    if (salePriceLabel) {
+      salePriceLabel.textContent = 'SALE PRICE';
+    }
+    
+    document.getElementById('victoryScreen').style.display = 'none';
+    lastTime = performance.now();
+    initTutorial();
+  });
 }
 
 // Initialize
 setupControls();
 setupGameOverToggles();
+setupPauseMenu();
+setupVictoryScreen();
 
 // Start with tutorial
 lastTime = performance.now();

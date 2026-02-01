@@ -40,15 +40,17 @@ export class Asteroid {
     
     // Generate a number if not provided
     if (number === null) {
-      if (Math.random() < CONFIG.ASTEROID.PRIME_CHANCE) {
-        this.number = CONFIG.ASTEROID.PRIMES[
-          Math.floor(Math.random() * CONFIG.ASTEROID.PRIMES.length)
-        ];
-      } else {
-        this.number = CONFIG.ASTEROID.COMPOSITES[
-          Math.floor(Math.random() * CONFIG.ASTEROID.COMPOSITES.length)
-        ];
-      }
+      // Keep generating until we get the right type (prime or composite)
+      const wantPrime = Math.random() < CONFIG.ASTEROID.PRIME_CHANCE;
+      let attempts = 0;
+      do {
+        this.number = Math.floor(Math.random() * (CONFIG.ASTEROID.MAX_NUMBER - CONFIG.ASTEROID.MIN_NUMBER + 1)) + CONFIG.ASTEROID.MIN_NUMBER;
+        attempts++;
+        if (attempts > 100) { // Fallback to prevent infinite loop
+          this.number = wantPrime ? 7 : 6;
+          break;
+        }
+      } while (isPrime(this.number) !== wantPrime);
     } else {
       this.number = number;
     }

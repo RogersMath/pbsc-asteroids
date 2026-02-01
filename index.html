@@ -14,6 +14,11 @@
   <div id="hud">
     <div class="hud-top">
       <div class="hud-left">
+        <div id="menuBtn" class="menu-btn">
+          <div class="hamburger-line"></div>
+          <div class="hamburger-line"></div>
+          <div class="hamburger-line"></div>
+        </div>
         <div class="stat-display">
           <div class="stat-label">HULL</div>
           <div class="stat-value" id="health">100</div>
@@ -93,13 +98,19 @@
         </div>
       </div>
       
+      <div class="acquisition-tracker" id="acquisitionTracker" style="display: none;">
+        <div class="acquisition-label">STANDARD ASTEROID ACQUISITION VALUE</div>
+        <div class="acquisition-value" id="acquisitionValue">0¢</div>
+        <div class="acquisition-note">Based on avg of last 4 missions (5x multiplier)</div>
+      </div>
+      
       <div class="loadout-section">
         <div class="loadout-title">NEXT MISSION LOADOUT</div>
         
         <div class="toggle-row">
           <div class="toggle-info">
             <div class="toggle-name">Scanner</div>
-            <div class="toggle-cost">30¢</div>
+            <div class="toggle-cost" id="scannerCost">30¢</div>
           </div>
           <label class="toggle-switch">
             <input type="checkbox" id="scannerToggle" checked>
@@ -110,7 +121,7 @@
         <div class="toggle-row">
           <div class="toggle-info">
             <div class="toggle-name">Yield +50%</div>
-            <div class="toggle-cost">20¢</div>
+            <div class="toggle-cost" id="yieldCost">20¢</div>
           </div>
           <label class="toggle-switch">
             <input type="checkbox" id="yieldToggle">
@@ -121,7 +132,7 @@
         <div class="toggle-row">
           <div class="toggle-info">
             <div class="toggle-name">Firepower</div>
-            <div class="toggle-cost">25¢</div>
+            <div class="toggle-cost" id="firepowerCost">25¢</div>
           </div>
           <label class="toggle-switch">
             <input type="checkbox" id="firepowerToggle">
@@ -132,7 +143,7 @@
         <div class="toggle-row">
           <div class="toggle-info">
             <div class="toggle-name">Hull +50%</div>
-            <div class="toggle-cost">35¢</div>
+            <div class="toggle-cost" id="hullCost">35¢</div>
           </div>
           <label class="toggle-switch">
             <input type="checkbox" id="hullToggle">
@@ -142,6 +153,69 @@
       </div>
       
       <button class="start-mission-btn" id="nextMissionBtn">LAUNCH NEXT MISSION</button>
+      <button class="sell-company-btn" id="sellCompanyBtn" style="display: none;">ACCEPT ACQUISITION OFFER</button>
+    </div>
+  </div>
+  
+  <!-- Pause Menu -->
+  <div id="pauseMenu">
+    <div class="pause-container">
+      <div class="pause-title">PAUSED</div>
+      <div class="pause-stats">
+        <div class="pause-stat-line">
+          <span class="pause-label">Missions Completed:</span>
+          <span class="pause-value" id="pauseMissions">0</span>
+        </div>
+        <div class="pause-stat-line">
+          <span class="pause-label">Current Wallet:</span>
+          <span class="pause-value" id="pauseWallet">1000¢</span>
+        </div>
+        <div class="pause-stat-line">
+          <span class="pause-label">Acquisition Value:</span>
+          <span class="pause-value" id="pauseAcquisition">0¢</span>
+        </div>
+      </div>
+      <button class="pause-btn" id="resumeBtn">RESUME MISSION</button>
+      <button class="pause-btn secondary" id="quitBtn">QUIT MISSION</button>
+    </div>
+  </div>
+  
+  <!-- Victory Screen -->
+  <div id="victoryScreen">
+    <div class="victory-container">
+      <div class="victory-title" id="victoryTitle">ACQUISITION COMPLETE!</div>
+      <div class="victory-subtitle" id="victorySubtitle">Standard Asteroid, Inc. has purchased your operation</div>
+      
+      <div class="final-stats">
+        <div class="final-stat-big">
+          <div class="final-label">SALE PRICE</div>
+          <div class="final-value" id="finalSalePrice">0¢</div>
+        </div>
+        
+        <div class="final-stat-row">
+          <div class="final-stat">
+            <div class="final-label-small">Missions Completed</div>
+            <div class="final-value-small" id="finalMissions">0</div>
+          </div>
+          <div class="final-stat">
+            <div class="final-label-small">Total Primes</div>
+            <div class="final-value-small" id="finalPrimes">0</div>
+          </div>
+        </div>
+        
+        <div class="final-stat-row">
+          <div class="final-stat">
+            <div class="final-label-small">Avg Net Income</div>
+            <div class="final-value-small" id="finalAvgIncome">0¢</div>
+          </div>
+          <div class="final-stat">
+            <div class="final-label-small">Best Streak</div>
+            <div class="final-value-small" id="finalBestStreak">0x</div>
+          </div>
+        </div>
+      </div>
+      
+      <button class="start-mission-btn" id="playAgainBtn">START NEW OPERATION</button>
     </div>
   </div>
 

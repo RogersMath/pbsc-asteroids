@@ -42,8 +42,9 @@ export const CONFIG = {
     
     // Number generation
     PRIME_CHANCE: 0.4,
-    PRIMES: [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47],
-    COMPOSITES: [4, 6, 8, 9, 10, 12, 14, 15, 16, 18, 20, 21, 22, 24, 25, 26, 27, 28, 30],
+    // Generate from 2-50, will be filtered to primes/composites
+    MIN_NUMBER: 2,
+    MAX_NUMBER: 50,
     
     // Without firepower upgrade
     HITS_TO_BREAK: 2,
@@ -74,6 +75,13 @@ export const CONFIG = {
   // Economy
   ECONOMY: {
     STARTING_WALLET: 1000,
+    
+    // Inflation
+    INFLATION_RATE: 1.05, // 5% cost increase per mission
+    
+    // Acquisition
+    ACQUISITION_MULTIPLIER: 5, // 5x average of last 4 missions
+    ACQUISITION_MIN_MISSIONS: 4, // Need 4 missions before you can sell
     
     // Mandatory costs
     SPACE_TAX: 50,
@@ -115,6 +123,11 @@ export const CONFIG = {
   VISUAL: {
     STARFIELD_COUNT: 80,
     STARFIELD_OPACITY: 0.6,
+    
+    // Space background decorations
+    BACKGROUND_GALAXIES: 3, // Number of galaxy sprites
+    BACKGROUND_STARS: 15, // Number of larger star icons
+    BACKGROUND_PLANET_CHANCE: 0.3, // 30% chance of big planet
     
     // Colors
     PRIME_COLOR: '#3b82f6',
