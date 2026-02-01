@@ -67,8 +67,11 @@ export class Ship {
       }
     }
     
-    // Apply friction (convert frame-based to time-based)
-    const frictionFactor = Math.pow(CONFIG.SHIP.FRICTION, 60 * dt);
+    // Apply friction (exponential damping)
+    // friction = 0.985 means 1.5% velocity lost per frame at 60fps
+    // Convert to continuous damping: damping = -ln(friction) * 60
+    const dampingRate = -Math.log(CONFIG.SHIP.FRICTION) * 60;
+    const frictionFactor = Math.exp(-dampingRate * dt);
     this.vx *= frictionFactor;
     this.vy *= frictionFactor;
     
