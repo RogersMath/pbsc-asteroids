@@ -1,18 +1,19 @@
 // config.js - All tunable game parameters
-
+// PHYSICS NOW TIME-BASED (per second) instead of frame-based
 export const CONFIG = {
   // Mission parameters
   MISSION: {
     DURATION: 120, // seconds (2 minutes)
     INITIAL_ASTEROIDS: 30, // Total asteroid pool for the mission
+    TUTORIAL_ASTEROIDS: 2, // Just 2 for tutorial
   },
   
-  // Ship parameters
+  // Ship parameters (converted to per-second values)
   SHIP: {
-    TURN_SPEED: 0.08,
-    ACCELERATION: 0.25,
-    MAX_SPEED: 4,
-    FRICTION: 0.98,
+    TURN_SPEED: 4.8, // radians per second (was 0.08 per frame * 60fps)
+    ACCELERATION: 15, // pixels per second^2 (was 0.25 per frame * 60fps)
+    MAX_SPEED: 240, // pixels per second (was 4 per frame * 60fps)
+    FRICTION: 0.98, // Applied per frame, will be converted to per-second
     BASE_HEALTH: 100,
     HULL_UPGRADE_MULTIPLIER: 1.5, // 150 health with upgrade
     FIRE_DELAY: 400, // milliseconds
@@ -27,12 +28,12 @@ export const CONFIG = {
     ENGINE_GLOW_COMBAT: 0.75,
   },
   
-  // Asteroid parameters
+  // Asteroid parameters (converted to per-second values)
   ASTEROID: {
     BASE_RADIUS: 20,
     RADIUS_LOG_MULTIPLIER: 8,
-    MIN_SPEED: 0.8,
-    MAX_SPEED: 2.0,
+    MIN_SPEED: 48, // pixels per second (was 0.8 per frame * 60fps)
+    MAX_SPEED: 120, // pixels per second (was 2.0 per frame * 60fps)
     MIN_POINTS: 8,
     MAX_EXTRA_POINTS: 5,
     RADIUS_VARIATION_MIN: 0.7,
@@ -49,25 +50,25 @@ export const CONFIG = {
     FACTORIZATION_RELIABILITY: 0.8, // 80% chance without firepower
   },
   
-  // Projectile parameters
+  // Projectile parameters (converted to per-second values)
   PROJECTILE: {
-    SPEED: 8,
-    LIFE: 80, // frames
+    SPEED: 480, // pixels per second (was 8 per frame * 60fps)
+    LIFE: 1333, // milliseconds (was 80 frames / 60fps * 1000)
     RADIUS: 3,
     COLOR: '#f59e0b',
   },
   
-  // Particle effects
+  // Particle effects (converted to per-second/millisecond values)
   PARTICLES: {
-    THRUST_CHANCE: 0.3, // 30% chance per frame
-    THRUST_LIFE: 20,
-    THRUST_SPEED: 2,
-    THRUST_SPREAD: 0.5,
+    THRUST_CHANCE: 0.3, // 30% chance per frame (keep as-is, checked per frame)
+    THRUST_LIFE: 333, // milliseconds (was 20 frames / 60fps * 1000)
+    THRUST_SPEED: 120, // pixels per second (was 2 per frame * 60fps)
+    THRUST_SPREAD: 30, // pixels per second (was 0.5 per frame * 60fps)
     EXPLOSION_COUNT: 10,
     COLLECTION_COUNT: 15,
-    EXPLOSION_LIFE: 30,
-    EXPLOSION_MIN_SPEED: 1,
-    EXPLOSION_MAX_SPEED: 3,
+    EXPLOSION_LIFE: 500, // milliseconds (was 30 frames / 60fps * 1000)
+    EXPLOSION_MIN_SPEED: 60, // pixels per second (was 1 per frame * 60fps)
+    EXPLOSION_MAX_SPEED: 180, // pixels per second (was 3 per frame * 60fps)
   },
   
   // Economy
@@ -80,10 +81,10 @@ export const CONFIG = {
     MAINTENANCE_PER_DAMAGE: 0.5, // Cost per point of damage taken
     TOW_FEE: 200, // If hull reaches 0
     
-    // Per-action costs
-    THRUST_COST: 0.01, // Per frame of thrust
-    TURN_COST: 0.005, // Per frame of turning
-    BULLET_COST_BASE: 0.5, // Base cost per shot
+    // Per-action costs (now properly time-scaled)
+    THRUST_COST_PER_SECOND: 0.6, // Was 0.01 per frame * 60fps
+    TURN_COST_PER_SECOND: 0.3, // Was 0.005 per frame * 60fps
+    BULLET_COST_BASE: 0.5, // Per shot (unchanged)
     BULLET_COST_FIREPOWER: 2.0, // Additional cost with firepower (total 2.5)
     
     // Subscriptions
@@ -126,7 +127,7 @@ export const CONFIG = {
     
     // Hit flash
     HIT_FLASH_COLOR: '#ffffff',
-    HIT_FLASH_DURATION: 10, // frames
+    HIT_FLASH_DURATION: 150, // milliseconds (was 10 frames / 60fps * 1000)
   },
   
   // UI settings
@@ -134,4 +135,4 @@ export const CONFIG = {
     HEALTH_WARNING_THRESHOLD: 60,
     HEALTH_DANGER_THRESHOLD: 30,
   },
-};
+}
