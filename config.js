@@ -11,8 +11,8 @@ export const CONFIG = {
   // Ship parameters (converted to per-second values)
   SHIP: {
     TURN_SPEED: 4.8, // radians per second (was 0.08 per frame * 60fps)
-    ACCELERATION: 15, // pixels per second^2 (was 0.25 per frame * 60fps)
-    MAX_SPEED: 240, // pixels per second (was 4 per frame * 60fps)
+    ACCELERATION: 25, // pixels per second^2 (was 0.25 per frame * 60fps)
+    MAX_SPEED: 500, // pixels per second (was 4 per frame * 60fps)
     FRICTION: 0.98, // Applied per frame, will be converted to per-second
     BASE_HEALTH: 100,
     HULL_UPGRADE_MULTIPLIER: 1.5, // 150 health with upgrade
