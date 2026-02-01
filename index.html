@@ -14,11 +14,6 @@
   <div id="hud">
     <div class="hud-top">
       <div class="hud-left">
-        <div id="menuBtn">
-          <div class="hamburger-line"></div>
-          <div class="hamburger-line"></div>
-          <div class="hamburger-line"></div>
-        </div>
         <div class="stat-display">
           <div class="stat-label">HULL</div>
           <div class="stat-value" id="health">100</div>
@@ -39,7 +34,6 @@
         </div>
       </div>
     </div>
-    <div class="hud-bottom" id="subscriptions"></div>
   </div>
   
   <!-- Controls -->
@@ -50,126 +44,105 @@
     <div class="control-btn collection-mode" id="modeBtn">COLLECT<br>MODE</div>
   </div>
   
-  <!-- Loadout Menu -->
-  <div id="loadoutMenu">
-    <div class="menu-container">
-      <div class="menu-header">
-        <div class="menu-title">MISSION LOADOUT</div>
-        <div class="close-btn" id="closeMenuBtn">×</div>
-      </div>
+  <!-- Game Over / Mission Results -->
+  <div id="gameOver">
+    <div class="game-over-container">
+      <div class="game-over-title">MISSION COMPLETE</div>
       
       <div class="wallet-display">
-        <div class="wallet-label">AVAILABLE CREDITS</div>
-        <div class="wallet-amount" id="walletAmount">1000</div>
+        <div class="wallet-label">TOTAL CREDITS</div>
+        <div class="wallet-amount" id="walletAmount">1000¢</div>
       </div>
       
-      <div class="section">
-        <div class="section-title">⚠ MANDATORY FEES</div>
-        <div class="upgrade-card active">
-          <div class="upgrade-header">
-            <div class="upgrade-name">Space Government Tax</div>
-            <div class="upgrade-cost per-run">50¢/run</div>
-          </div>
-          <div class="upgrade-description">
-            Mandatory operational tax. Automatically deducted at mission start.
-          </div>
+      <div class="mission-summary">
+        <div class="summary-line">
+          <span class="summary-label">Primes Collected:</span>
+          <span class="summary-value" id="primesCollected">0</span>
         </div>
-      </div>
-      
-      <div class="section">
-        <div class="section-title">⚙ MINER'S GUILD CONTRACTS</div>
-        
-        <div class="upgrade-card" id="scannerCard">
-          <div class="upgrade-header">
-            <div class="upgrade-name">Auto-Scanner Premium</div>
-            <div class="upgrade-cost">30¢/run</div>
-          </div>
-          <div class="upgrade-description">
-            Color-codes asteroids: BLUE=prime (safe), RED=composite (danger). Turn OFF to save costs and rely on number recognition.
-          </div>
-          <button class="toggle-btn active" id="scannerToggle">ENABLED</button>
+        <div class="summary-line">
+          <span class="summary-label">Base Earnings:</span>
+          <span class="summary-value" id="baseEarnings">0¢</span>
         </div>
-        
-        <div class="upgrade-card" id="yieldCard">
-          <div class="upgrade-header">
-            <div class="upgrade-name">Yield Booster</div>
-            <div class="upgrade-cost per-run">20¢/run</div>
-          </div>
-          <div class="upgrade-description">
-            +50% credits per prime collected. Good for skilled pilots who can collect efficiently.
-          </div>
-          <button class="toggle-btn" id="yieldToggle">DISABLED</button>
+        <div class="summary-line" id="streakBonusLine" style="display: none;">
+          <span class="summary-label">Streak Bonus:</span>
+          <span class="summary-value" id="streakBonus">0¢</span>
         </div>
-        
-        <div class="upgrade-card" id="firepowerCard">
-          <div class="upgrade-header">
-            <div class="upgrade-name">Firepower Enhancement</div>
-            <div class="upgrade-cost per-run">25¢/run</div>
-          </div>
-          <div class="upgrade-description">
-            One-shot composite destruction. Warning: 4x bullet cost (0.5¢ → 2.5¢ per shot). Without this, composites require 2 hits and flash white when damaged.
-          </div>
-          <button class="toggle-btn" id="firepowerToggle">DISABLED</button>
+        <div class="summary-line">
+          <span class="summary-label">Yield Bonus:</span>
+          <span class="summary-value" id="yieldBonus">0¢</span>
         </div>
-        
-        <div class="upgrade-card" id="hullCard">
-          <div class="upgrade-header">
-            <div class="upgrade-name">Hull Reinforcement</div>
-            <div class="upgrade-cost per-run">35¢/run</div>
-          </div>
-          <div class="upgrade-description">
-            +50% hull integrity. Stay in the field longer, take more risks.
-          </div>
-          <button class="toggle-btn" id="hullToggle">DISABLED</button>
+        <div class="summary-line">
+          <span class="summary-label">Subscription Costs:</span>
+          <span class="summary-value negative" id="subscriptionCosts">0¢</span>
+        </div>
+        <div class="summary-line">
+          <span class="summary-label">Action Costs:</span>
+          <span class="summary-value negative" id="actionCosts">0¢</span>
+        </div>
+        <div class="summary-line">
+          <span class="summary-label">Maintenance:</span>
+          <span class="summary-value negative" id="maintenanceCost">0¢</span>
+        </div>
+        <div class="summary-line" id="towFeeLine" style="display: none;">
+          <span class="summary-label">Tow Fee:</span>
+          <span class="summary-value negative" id="towFee">0¢</span>
+        </div>
+        <div class="summary-line net-profit">
+          <span class="summary-label">NET PROFIT:</span>
+          <span class="summary-value" id="netProfit">0¢</span>
         </div>
       </div>
       
-      <button class="start-mission-btn" id="startMissionBtn">LAUNCH MISSION</button>
+      <div class="loadout-section">
+        <div class="loadout-title">NEXT MISSION LOADOUT</div>
+        
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-name">Scanner</div>
+            <div class="toggle-cost">30¢</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="scannerToggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-name">Yield +50%</div>
+            <div class="toggle-cost">20¢</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="yieldToggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-name">Firepower</div>
+            <div class="toggle-cost">25¢</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="firepowerToggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-name">Hull +50%</div>
+            <div class="toggle-cost">35¢</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="hullToggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      
+      <button class="start-mission-btn" id="nextMissionBtn">LAUNCH NEXT MISSION</button>
     </div>
-  </div>
-  
-  <!-- Game Over -->
-  <div id="gameOver">
-    <div class="game-over-title">MISSION ENDED</div>
-    <div class="mission-summary">
-      <div class="summary-line">
-        <span class="summary-label">Primes Collected:</span>
-        <span class="summary-value" id="primesCollected">0</span>
-      </div>
-      <div class="summary-line">
-        <span class="summary-label">Base Earnings:</span>
-        <span class="summary-value" id="baseEarnings">0¢</span>
-      </div>
-      <div class="summary-line" id="streakBonusLine" style="display: none;">
-        <span class="summary-label">Streak Bonus:</span>
-        <span class="summary-value" id="streakBonus">0¢</span>
-      </div>
-      <div class="summary-line">
-        <span class="summary-label">Yield Bonus:</span>
-        <span class="summary-value" id="yieldBonus">0¢</span>
-      </div>
-      <div class="summary-line">
-        <span class="summary-label">Subscription Costs:</span>
-        <span class="summary-value negative" id="subscriptionCosts">0¢</span>
-      </div>
-      <div class="summary-line">
-        <span class="summary-label">Action Costs:</span>
-        <span class="summary-value negative" id="actionCosts">0¢</span>
-      </div>
-      <div class="summary-line">
-        <span class="summary-label">Maintenance:</span>
-        <span class="summary-value negative" id="maintenanceCost">0¢</span>
-      </div>
-      <div class="summary-line" id="towFeeLine" style="display: none;">
-        <span class="summary-label">Tow Fee:</span>
-        <span class="summary-value negative" id="towFee">0¢</span>
-      </div>
-      <div class="summary-line net-profit">
-        <span class="summary-label">NET PROFIT:</span>
-        <span class="summary-value" id="netProfit">0¢</span>
-      </div>
-    </div>
-    <button class="start-mission-btn" id="returnToLoadout">RETURN TO LOADOUT</button>
   </div>
 
   <script type="module" src="main.js"></script>
