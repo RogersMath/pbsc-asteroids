@@ -60,8 +60,9 @@ export class Asteroid {
     // Hit counter for composites (need 2 hits without firepower upgrade)
     this.hits = 0;
     this.flashTimer = 0;
+    this.flashStart = 0;
     
-    // Random velocity
+    // Random velocity (in pixels per second)
     const angle = Math.random() * Math.PI * 2;
     const speed = CONFIG.ASTEROID.MIN_SPEED + 
                   Math.random() * (CONFIG.ASTEROID.MAX_SPEED - CONFIG.ASTEROID.MIN_SPEED);
@@ -84,13 +85,14 @@ export class Asteroid {
     }
   }
   
-  update(canvas) {
-    this.x += this.vx;
-    this.y += this.vy;
+  update(canvas, dt) {
+    // dt is in seconds, velocities are in pixels/second
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
     
     // Update flash timer
     if (this.flashTimer > 0) {
-      this.flashTimer--;
+      this.flashTimer -= dt * 1000; // Convert dt to milliseconds
     }
     
     // Wrap around screen
@@ -177,8 +179,9 @@ export class Asteroid {
     for (let factor of factors) {
       const angle = Math.random() * Math.PI * 2;
       const asteroid = new Asteroid(this.x, this.y, factor);
-      asteroid.vx += Math.cos(angle) * 0.5;
-      asteroid.vy += Math.sin(angle) * 0.5;
+      // Add some velocity variation (in pixels/second)
+      asteroid.vx += Math.cos(angle) * 30;
+      asteroid.vy += Math.sin(angle) * 30;
       newAsteroids.push(asteroid);
     }
     
