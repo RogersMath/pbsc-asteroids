@@ -16,7 +16,7 @@ export class Ship {
     this.canFire = true;
     this.fireDelay = CONFIG.SHIP.FIRE_DELAY;
     
-    // Cost tracking
+    // Cost tracking (accumulates costs in cents)
     this.actionCosts = {
       thrust: 0,
       turn: 0,
@@ -32,25 +32,27 @@ export class Ship {
   }
   
   update(controls, dt, particles) {
-    // Rotation (costs per frame)
+    // dt is in seconds
+    
+    // Rotation (costs per second, scaled by dt)
     if (controls.turnLeft) {
-      this.rotation -= CONFIG.SHIP.TURN_SPEED;
-      this.actionCosts.turn += CONFIG.ECONOMY.TURN_COST;
+      this.rotation -= CONFIG.SHIP.TURN_SPEED * dt;
+      this.actionCosts.turn += CONFIG.ECONOMY.TURN_COST_PER_SECOND * dt;
     }
     if (controls.turnRight) {
-      this.rotation += CONFIG.SHIP.TURN_SPEED;
-      this.actionCosts.turn += CONFIG.ECONOMY.TURN_COST;
+      this.rotation += CONFIG.SHIP.TURN_SPEED * dt;
+      this.actionCosts.turn += CONFIG.ECONOMY.TURN_COST_PER_SECOND * dt;
     }
     
-    // Thrust (costs per frame)
+    // Thrust (costs per second, scaled by dt)
     if (controls.thrust) {
       const angle = this.rotation;
-      this.vx += Math.cos(angle) * CONFIG.SHIP.ACCELERATION;
-      this.vy += Math.sin(angle) * CONFIG.SHIP.ACCELERATION;
-      this.actionCosts.thrust += CONFIG.ECONOMY.THRUST_COST;
+      this.vx += Math.cos(angle) * CONFIG.SHIP.ACCELERATION * dt;
+      this.vy += Math.sin(angle) * CONFIG.SHIP.ACCELERATION * dt;
+      this.actionCosts.thrust += CONFIG.ECONOMY.THRUST_COST_PER_SECOND * dt;
       
-      // Thrust particles
-      if (Math.random() > (1 - CONFIG.PARTICLES.THRUST_CHANCE)) {
+      // Thrust particles (chance is per frame, keep as-is)
+      if (Math.random() < CONFIG.PARTICLES.THRUST_CHANCE) {
         particles.push({
           x: this.x - Math.cos(angle) * 20,
           y: this.y - Math.sin(angle) * 20,
@@ -59,14 +61,16 @@ export class Ship {
           vy: -Math.sin(angle) * CONFIG.PARTICLES.THRUST_SPEED + 
               (Math.random() - 0.5) * CONFIG.PARTICLES.THRUST_SPREAD,
           life: CONFIG.PARTICLES.THRUST_LIFE,
+          maxLife: CONFIG.PARTICLES.THRUST_LIFE,
           color: '#22d3ee'
         });
       }
     }
     
-    // Apply friction
-    this.vx *= CONFIG.SHIP.FRICTION;
-    this.vy *= CONFIG.SHIP.FRICTION;
+    // Apply friction (convert frame-based to time-based)
+    const frictionFactor = Math.pow(CONFIG.SHIP.FRICTION, 60 * dt);
+    this.vx *= frictionFactor;
+    this.vy *= frictionFactor;
     
     // Limit speed
     const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
@@ -75,9 +79,9 @@ export class Ship {
       this.vy = (this.vy / speed) * CONFIG.SHIP.MAX_SPEED;
     }
     
-    // Update position
-    this.x += this.vx;
-    this.y += this.vy;
+    // Update position (velocities are in pixels/second)
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
     
     // Wrap around screen
     const canvas = { width: window.innerWidth, height: window.innerHeight };
@@ -102,7 +106,8 @@ export class Ship {
       y: this.y + Math.sin(angle) * 30,
       vx: Math.cos(angle) * CONFIG.PROJECTILE.SPEED + this.vx,
       vy: Math.sin(angle) * CONFIG.PROJECTILE.SPEED + this.vy,
-      life: CONFIG.PROJECTILE.LIFE
+      life: CONFIG.PROJECTILE.LIFE,
+      maxLife: CONFIG.PROJECTILE.LIFE
     });
     
     this.canFire = false;
